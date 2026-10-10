@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Номерок 2.0</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --card: #1a1a1f;
+    --text: #f2f2f2;
+    --muted: #8a8a94;
+    --accent: #2ecc71;
+    --accent-dark: #27ae60;
+    --plate: #ffffff;
+    --plate-text: #111;
+    --border: #2a2a30;
+  }
+  [data-theme="light"] {
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --text: #111;
+    --muted: #666;
+    --border: #e0e0e5;
+    --plate: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    transition: background .3s, color .3s;
+  }
+  .app {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header h1 { font-size: 20px; }
+  .theme-btn {
+    background: var(--border);
+    color: var(--text);
+    border: none;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .balance {
+    background: var(--border);
+    padding: 12px 16px;
+    border-radius: 14px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+  }
+  .balance b { color: var(--accent); }
+  .plate-area {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+    min-height: 100px;
+    align-items: center;
+  }
+  .plate {
+    display: flex;
+    border: 3px solid #111;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--plate);
+    box-shadow: 0 6px 20px rgba(0,0,0,.4);
+    transition: transform .1s;
+  }
+  .plate.spin { animation: shake .4s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px) rotate(-1deg); }
+    75% { transform: translateX(6px) rotate(1deg); }
+  }
+  .plate .code {
+    font-family: "Courier New", monospace;
+    font-weight: 900;
+    font-size: 34px;
+    padding: 12px 18px;
+    color: var(--plate-text);
+    letter-spacing: 2px;
+  }
+  .plate .region {
+    background: #fff;
+    color: #111;
+    border-left: 3px solid #111;
+    padding: 12px 10px;
+    font-family: "Courier New", monospace;
+    font-weight: 900;
+    font-size: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+  }
+  .plate .region small {
+    font-size: 9px;
+    font-weight: 700;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .flag {
+    display: inline-block;
+    width: 14px; height: 9px;
+    background: linear-gradient(#fff 33%, #0039a6 33% 66%, #d52b1e 66%);
+    border-radius: 1px;
+  }
+  .price {
+    text-align: center;
+    font-size: 16px;
+    color: var(--muted);
+  }
+  .price b { color: var(--accent); font-size: 20px; }
+  .btns { display: flex; flex-direction: column; gap: 10px; }
+  button.action {
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .1s, filter .1s;
+  }
+  button.action:active { transform: scale(.97); }
+  .roll { background: var(--accent); color: #fff; }
+  .roll:hover { filter: brightness(1.1); }
+  .sell { background: #f39c12; color: #fff; }
+  .secondary {
+    background: var(--border);
+    color: var(--text);
+  }
+  .row { display: flex; gap: 10px; }
+  .row button { flex: 1; }
+  .cabinet {
+    background: var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    display: none;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .cabinet.show { display: block; }
+  .cabinet .label { color: var(--muted); }
+  .support {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .support a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .toast {
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--accent);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-weight: 600;
+    transition: transform .3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <h1>🚗 Номерок 2.0</h1>
+    <button class="theme-btn" id="themeBtn" title="Сменить тему">🌑</button>
+  </div>
+
+  <div class="balance">
+    <span>💼 Баланс</span>
+    <b id="balance">100 000 ₽</b>
+  </div>
+
+  <div class="plate-area">
+    <div class="plate" id="plate" style="display:none;">
+      <div class="code" id="plateCode">А000АА</div>
+      <div class="region">
+        <span id="plateRegion">77</span>
+        <small>RUS <span class="flag"></span></small>
+      </div>
+    </div>
+    <div id="placeholder" style="color:var(--muted);font-size:14px;">
+      Нажмите «Крутить», чтобы выбить номер
+    </div>
+  </div>
+
+  <div class="price" id="priceLine"></div>
+
+  <div class="btns">
+    <button class="action roll" id="rollBtn">🎰 Крутить</button>
+    <button class="action sell" id="sellBtn" style="display:none;">
+      💵 Продать
+    </button>
+    <div class="row">
+      <button class="action secondary" id="cabinetBtn">👤 Кабинет</button>
+      <button class="action secondary" id="resetBtn">🔄 Сброс</button>
+    </div>
+  </div>
+
+  <div class="cabinet" id="cabinet">
+    <div><span class="label">🆔 ID:</span> <span id="cabId">—</span></div>
+    <div><span class="label">💼 Баланс:</span> <b id="cabBalance">—</b></div>
+    <div style="margin-top:8px;"><b>🏆 Самый дорогой номер:</b></div>
+    <div><span class="label">🚗 Номер:</span> <span id="cabBest">Нет</span></div>
+    <div><span class="label">💰 Оценка:</span> <span id="cabBestPrice">0 ₽</span></div>
+  </div>
+
+  <div class="support">
+    Поддержка: <a href="https://t.me/non_CC" target="_blank">@non_CC</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const LETTERS = "АВЕКМНОРСТУХ";
+  const REGIONS = ["77","99","97","177","199","197","777","799","50","150","190","750"];
+  const START_BALANCE = 100000;
+
+  const $ = id => document.getElementById(id);
+
+  // --- Состояние ---
+  let state = loadState();
+  let currentNumber = null;
+  let currentPrice = 0;
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem("nomerok_state");
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return {
+      id: Math.floor(100000 + Math.random() * 900000),
+      balance: START_BALANCE,
+      best: "Нет",
+      bestPrice: 0,
+      theme: "dark"
+    };
+  }
+
+  function saveState() {
+    localStorage.setItem("nomerok_state", JSON.stringify(state));
+  }
+
+  function fmt(n) {
+    return n.toLocaleString("ru-RU").replace(/,/g, " ");
+  }
+
+  // --- Генерация номера ---
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function genNumber() {
+    const l1 = pick(LETTERS.split(""));
+    const d = Math.floor(Math.random() * 999) + 1;
+    const l2 = pick(LETTERS.split(""));
+    const l3 = pick(LETTERS.split(""));
+    const region = pick(REGIONS);
+    const digits = String(d).padStart(3, "0");
+    return { code: l1 + digits + l2 + l3, region };
+  }
+
+  function calcPrice(code, region) {
+    const digits = code.slice(1, 4);
+    const d = parseInt(digits, 10);
+    let price = 5000 + Math.floor(Math.random() * 25000);
+
+    if (["77","99","97"].includes(region)) price *= 3;
+    else if (["177","199","197"].includes(region)) price *= 2;
+    else if (["777","799"].includes(region)) price *= 4;
+
+    const pretty = ["001","007","777","999","666","123","321","111","222",
+                    "333","444","555","888","100","200","300","500"];
+    if (pretty.includes(digits)) price *= 5;
+
+    const letters = code.replace(/[0-9]/g, "");
+    if (letters[0] === letters[1] && letters[1] === letters[2]) price *= 10;
+    else if (letters[1] === letters[2]) price *= 2;
+
+    if (d % 100 === 0) price *= 3;
+    else if (d % 10 === 0) price *= 1.5;
+
+    return Math.floor(price);
+  }
+
+  // --- UI ---
+  function render() {
+    $("balance").textContent = fmt(state.balance) + " ₽";
+    $("cabId").textContent = state.id;
+    $("cabBalance").textContent = fmt(state.balance) + " ₽";
+    $("cabBest").textContent = state.best;
+    $("cabBestPrice").textContent = fmt(state.bestPrice) + " ₽";
+    document.body.setAttribute("data-theme", state.theme);
+    $("themeBtn").textContent = state.theme === "dark" ? "🌑" : "☀️";
+  }
+
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._tm);
+    t._tm = setTimeout(() => t.classList.remove("show"), 1600);
+  }
+
+  // --- Действия ---
+  function roll() {
+    const btn = $("rollBtn");
+    if (btn.disabled) return;
+    btn.disabled = true;
+
+    // Анимация "прокрутки"
+    let spins = 0;
+    const interval = setInterval(() => {
+      const n = genNumber();
+      showPlate(n.code, n.region);
+      spins++;
+      if (spins > 8) {
+        clearInterval(interval);
+        finishRoll();
+        btn.disabled = false;
+      }
+    }, 60);
+  }
+
+  function finishRoll() {
+    const n = genNumber();
+    currentNumber = n;
+    currentPrice = calcPrice(n.code, n.region);
+    showPlate(n.code, n.region);
+    $("priceLine").innerHTML = "💰 Оценка: <b>" + fmt(currentPrice) + " ₽</b>";
+    $("sellBtn").style.display = "block";
+    $("sellBtn").textContent = "💵 Продать за " + fmt(currentPrice) + " ₽";
+  }
+
+  function showPlate(code, region) {
+    $("plate").style.display = "flex";
+    $("placeholder").style.display = "none";
+    $("plateCode").textContent = code;
+    $("plateRegion").textContent = region;
+    $("plate").classList.add("spin");
+    setTimeout(() => $("plate").classList.remove("spin"), 400);
+  }
+
+  function sell() {
+    if (!currentNumber) return;
+    state.balance += currentPrice;
+    let record = false;
+    if (currentPrice > state.bestPrice) {
+      state.bestPrice = currentPrice;
+      state.best = currentNumber.code + " " + currentNumber.region;
+      record = true;
+    }
+    saveState();
+    render();
+
+    toast(record ? "🏆 Новый рекорд! +" + fmt(currentPrice) + " ₽"
+                 : "✅ Продано +" + fmt(currentPrice) + " ₽");
+
+    currentNumber = null;
+    currentPrice = 0;
+    $("sellBtn").style.display = "none";
+    $("priceLine").innerHTML = "";
+    $("plate").style.display = "none";
+    $("placeholder").style.display = "block";
+  }
+
+  function toggleCabinet() {
+    $("cabinet").classList.toggle("show");
+  }
+
+  function toggleTheme() {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    saveState();
+    render();
+  }
+
+  function reset() {
+    if (!confirm("Сбросить прогресс? Баланс, рекорд и тема вернутся к старту.")) return;
+    localStorage.removeItem("nomerok_state");
+    state = loadState();
+    currentNumber = null;
+    currentPrice = 0;
+    $("sellBtn").style.display = "none";
+    $("priceLine").innerHTML = "";
+    $("plate").style.display = "none";
+    $("placeholder").style.display = "block";
+    render();
+    toast("Сброшено");
+  }
+
+  // --- Слушатели ---
+  $("rollBtn").addEventListener("click", roll);
+  $("sellBtn").addEventListener("click", sell);
+  $("cabinetBtn").addEventListener("click", toggleCabinet);
+  $("themeBtn").addEventListener("click", toggleTheme);
+  $("resetBtn").addEventListener("click", reset);
+
+  // --- Старт ---
+  render();
+})();
+</script>
+</body>
+</html>
